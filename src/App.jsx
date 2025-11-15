@@ -1,20 +1,23 @@
-import React from 'react'
-// import MedicalAnalyzer from './components/MedicalAnalyzer'
-import './App.css'
 
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import Home from './components/Home';
+import Footer from './components/Footer';
+import Header from './components/Header';
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>🧬 DocTalk</h1>
-        <p>AI-Powered Medical Report Translation</p>
-      </header>
-      
-      {/* <main>
-       // <MedicalAnalyzer />
-      </main> */}
-    </div>
-  )
+    <Router>
+      <div className="min-h-screen bg-white font-sans">
+        <Header />
+        <main>
+          <Routes>
+            <Route path="/" element={<Home />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </Router>
+  );
 }
 
-export default App
+export default App;
