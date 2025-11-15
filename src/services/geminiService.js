@@ -1,6 +1,6 @@
 import axios from 'axios';
 require('dotenv').config();
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = import.meta.env.GEMINI_API_KEY;
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`;
 
