@@ -1,9 +1,11 @@
 import Tesseract from 'tesseract.js';
 let pdf;
-// Dynamic import to handle the module export issue
-import('pdf-parse').then(module => {
+
+const loadPdfParse = async () => {
+  const module = await import('pdf-parse');
   pdf = module.default || module;
-});
+};
+
 
 class TextExtractionService {
   
@@ -62,6 +64,8 @@ class TextExtractionService {
       
       reader.onload = async function(event) {
         try {
+          await loadPdfParse();
+          console.log("PDF parser loaded, starting text extraction....")
           const pdfBuffer = new Uint8Array(event.target.result);
           const data = await pdf(pdfBuffer);
           console.log('PDF text extraction completed');

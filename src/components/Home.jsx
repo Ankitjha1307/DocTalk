@@ -1,11 +1,119 @@
 import { useState, useEffect } from 'react';
+import FileUploadModal from './FileUploadModal';
+import AnalysisResults from './AnalysisResults';
 
-const DocTalkLanding = ({onOpenChatbot,onOpenFileUpload}) => {
+const DocTalkLanding = ({onOpenChatbot, onOpenFileUpload}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [currentFile, setCurrentFile] = useState(null);
+  const [showResults, setShowResults] = useState(false);
+
+  // Handle analysis results from FileUploadModal
+  const handleAnalysisComplete = (analysis, file) => {
+    console.log('Analysis received:', analysis);
+    setAnalysisResult(analysis);
+    setCurrentFile(file);
+    setIsUploadModalOpen(false);
+  };
+
+  const handleOpenFileUpload = () => {
+    setIsUploadModalOpen(true);
+    setAnalysisResult(null);
+    setCurrentFile(null);
+    setShowResults(false);
+  };
+
+  const handleCloseModal = () => {
+    setIsUploadModalOpen(false);
+  };
+
+  const handleViewResults = () => {
+    setShowResults(true);
+    console.log('View detailed results');
+  };
+
+  const handleCloseResults = () => {
+    setShowResults(false);
+  };
+
+  const handleNewAnalysis = () => {
+    setAnalysisResult(null);
+    setCurrentFile(null);
+    setShowResults(false);
+    setIsUploadModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 ">
 
+      {/* File Upload Modal */}
+      <FileUploadModal 
+        isOpen={isUploadModalOpen}
+        onClose={handleCloseModal}
+        onAnalysisComplete={handleAnalysisComplete}
+      />
+
+      {/* Results Modal - SHOW WHEN ANALYSIS COMPLETE */}
+      {analysisResult && showResults && (
+        <AnalysisResults 
+          analysis={analysisResult}
+          file={currentFile}
+          onClose={handleCloseResults}
+          onNewAnalysis={handleNewAnalysis}
+        />
+      )}
+
+      {/* Quick Results Panel - Shows when analysis is complete */}
+      {analysisResult && !showResults && (
+        <div className="fixed top-4 right-4 left-4 md:left-auto md:w-96 bg-white rounded-xl shadow-2xl border border-green-200 z-50 animate-slide-in">
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <h3 className="font-bold text-gray-800">Analysis Complete! 🎉</h3>
+              </div>
+              <button 
+                onClick={() => setAnalysisResult(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">File:</span>
+                <span className="font-medium truncate ml-2 max-w-48">{currentFile?.name}</span>
+              </div>
+              
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-green-800 text-sm font-medium mb-2">
+                  ✅ Your medical report has been analyzed
+                </p>
+                <p className="text-green-700 text-xs">
+                  AI has simplified your medical report into easy-to-understand insights
+                </p>
+              </div>
+              
+              <div className="flex space-x-2">
+                <button 
+                  onClick={handleViewResults}
+                  className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  View Results
+                </button>
+                <button 
+                  onClick={handleNewAnalysis}
+                  className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                >
+                  New Analysis
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="py-16 md:py-24 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
@@ -35,19 +143,101 @@ const DocTalkLanding = ({onOpenChatbot,onOpenFileUpload}) => {
               DocTalk simplifies healthcare for everyone. Understand medical reports, access reliable medicine information, track health trends, and stay prepared with reminders—all in one secure platform.
             </p>
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <button className="px-8 py-3 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-colors shadow-lg"    onClick={onOpenFileUpload}>
-                Try DocTalk Free
+              <button 
+                className="px-8 py-3 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-colors shadow-lg flex items-center space-x-2 group"
+                onClick={handleOpenFileUpload}
+              >
+                <i className="fas fa-file-medical-alt group-hover:scale-110 transition-transform"></i>
+                <span>Try DocTalk Free</span>
               </button>
-              <button className="px-8 py-3 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition-colors">
-                Watch Demo
+              <button className="px-8 py-3 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition-colors flex items-center space-x-2">
+                <i className="fas fa-play-circle"></i>
+                <span>Watch Demo</span>
               </button>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="mt-12 grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold text-white mb-1">100%</div>
+                <div className="text-blue-200 text-sm">Privacy First</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold text-white mb-1">AI</div>
+                <div className="text-blue-200 text-sm">Powered</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl md:text-3xl font-bold text-white mb-1">Free</div>
+                <div className="text-blue-200 text-sm">To Use</div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Problems We Solve Section */}
+      {/* How It Works Section - NEW */}
       <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">How DocTalk Works</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Three simple steps to understand your medical reports
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {[
+              {
+                step: '1',
+                icon: 'fa-upload',
+                title: 'Upload Medical Report',
+                desc: 'Upload lab reports, prescriptions, or any medical document in seconds'
+              },
+              {
+                step: '2',
+                icon: 'fa-robot',
+                title: 'AI Analysis',
+                desc: 'Our AI processes your document locally and explains it in simple terms'
+              },
+              {
+                step: '3',
+                icon: 'fa-chart-line',
+                title: 'Get Insights',
+                desc: 'Receive clear explanations, actionable insights, and questions for your doctor'
+              }
+            ].map((step, index) => (
+              <div key={index} className="text-center p-6">
+                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 relative">
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                    {step.step}
+                  </div>
+                  <i className={`fas ${step.icon} text-blue-600 text-2xl`}></i>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">{step.title}</h3>
+                <p className="text-gray-600">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA Card */}
+          <div className="mt-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-8 text-center text-white max-w-2xl mx-auto">
+            <h3 className="text-2xl font-bold mb-4">Ready to Understand Your Health?</h3>
+            <p className="text-blue-100 mb-6">
+              Upload your first medical report and see the magic of AI-powered health explanations
+            </p>
+            <button 
+              onClick={handleOpenFileUpload}
+              className="bg-white text-blue-600 px-8 py-3 rounded-lg font-bold hover:bg-blue-50 transition-colors inline-flex items-center space-x-2"
+            >
+              <i className="fas fa-bolt"></i>
+              <span>Analyze My Report Now</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Problems We Solve Section */}
+      <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Problems We Solve</h2>
@@ -89,7 +279,7 @@ const DocTalkLanding = ({onOpenChatbot,onOpenFileUpload}) => {
                 desc: 'Navigating the complex healthcare system can be overwhelming and confusing.' 
               }
             ].map((problem, index) => (
-              <div key={index} className="bg-blue-50 rounded-xl p-6 hover:shadow-md transition-shadow">
+              <div key={index} className="bg-white rounded-xl p-6 hover:shadow-md transition-shadow border border-gray-200">
                 <div className="w-14 h-14 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <i className={`fas ${problem.icon} text-blue-600 text-xl`}></i>
                 </div>
@@ -135,6 +325,11 @@ const DocTalkLanding = ({onOpenChatbot,onOpenFileUpload}) => {
                     icon: 'fa-capsules', 
                     title: 'Medicine Information Search', 
                     desc: 'Details on purpose, dosage, side effects, interactions, and alternatives.' 
+                  },
+                  { 
+                    icon: 'fa-lock', 
+                    title: 'Privacy-First Processing', 
+                    desc: 'Advanced AI that automatically removes personal information before analysis. Your data never leaves your device.' 
                   },
                   { 
                     icon: 'fa-robot', 

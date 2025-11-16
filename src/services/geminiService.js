@@ -1,28 +1,39 @@
 import axios from 'axios';
-const apiKey = import.meta.env.GEMINI_API_KEY;
+import PrivacyService from './privacyService';
 
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`;
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 class GeminiService {
   
-  // Main medical analysis function
   async analyzeMedicalText(medicalText, options = {}) {
     try {
-      // Validate and preprocess input
-      const processedText = this.preprocessMedicalText(medicalText);
+      console.log('Original text length:', medicalText.length);
       
-      if (!processedText || processedText.trim().length < 10) {
-        throw new Error('Insufficient medical text for analysis. Please provide a more detailed medical report.');
+      // Check for sensitive information
+      const hasSensitiveInfo = PrivacyService.hasSensitiveInfo(medicalText);
+      if (hasSensitiveInfo) {
+        console.log('⚠️ Personal information detected in medical text');
+      }
+      
+      // Sanitize the text before sending to Gemini
+      const sanitizedText = PrivacyService.sanitizeMedicalText(medicalText);
+      console.log('Sanitized text length:', sanitizedText.length);
+      
+      if (hasSensitiveInfo) {
+        console.log('✅ Personal information removed before AI analysis');
+      }
+      // === END PRIVACY PROTECTION ===
+
+      if (!sanitizedText || sanitizedText.trim().length < 10) {
+        throw new Error('Insufficient medical text for analysis after privacy filtering.');
       }
 
-      // Create context-aware prompt
-      const prompt = this.createMedicalAnalysisPrompt(processedText, options);
-      
-      // Call Gemini API
+      const prompt = this.createMedicalAnalysisPrompt(sanitizedText, options);
       const analysis = await this.callGeminiAPI(prompt);
       
-      // Post-process and structure the response
-      return this.structureAnalysisResponse(analysis, processedText);
+      return this.structureAnalysisResponse(analysis, sanitizedText);
       
     } catch (error) {
       console.error('Medical analysis error:', error);
@@ -30,75 +41,22 @@ class GeminiService {
     }
   }
 
-  // Preprocess medical text for better analysis
-  preprocessMedicalText(text) {
-    return text
-      .replace(/([A-Z][a-z]+)\s+(\d+\.\d+)/g, '$1: $2') // Improve number formatting
-      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space between camelCase
-      .replace(/\s+/g, ' ')
-      .trim()
-      .substring(0, 10000); // Limit text length for API
-  }
-
-  // Create sophisticated medical analysis prompt
+  // Update prompt to mention privacy protection
   createMedicalAnalysisPrompt(medicalText, options) {
-    const context = options.context || 'general'; // lab, discharge, prescription, etc.
+    const context = options.context || 'general';
 
     return `
-        You are DocTalk - an AI medical translator specialized in explaining complex medical information to patients in simple, clear, and compassionate language.
+      Analyze this medical ${context} report and explain it in simple terms:
+      ${medicalText}
 
-        CONTEXT: ${this.getContextDescription(context)}
-        MEDICAL REPORT CONTENT:
-        """
-        ${medicalText}
-        """
+      Provide:
+      1. Brief summary of key findings
+      2. Simple explanations of medical terms
+      3. Normal ranges if available
+      4. Questions to ask a doctor
 
-        ANALYSIS INSTRUCTIONS:
-
-        Please analyze this medical content and provide a structured explanation following this EXACT format:
-
-        🎯 **EXECUTIVE SUMMARY**
-        [Provide a 2-3 sentence overview of the most important findings in simple terms. Focus on what the patient needs to know first.]
-
-        🔍 **DETAILED BREAKDOWN**
-        [For each significant finding, use this structure:
-        • **Test/Item**: [Name and value]
-        • **What it means**: [Simple explanation using everyday analogies]
-        • **Normal Range**: [If applicable]
-        • **Significance**: [Why this matters in practical terms]
-        ]
-
-        💡 **PATIENT-FRIENDLY EXPLANATION**
-        [Explain the overall health implications as if talking to a friend:
-        - Use analogies like "think of this as your body's delivery system"
-        - Avoid all medical jargon
-        - Be reassuring but honest
-        - Connect findings to daily life
-        ]
-
-        📋 **RECOMMENDED ACTION PLAN**
-        • [Priority action 1 - e.g., "Discuss these results with your doctor"]
-        • [Priority action 2 - e.g., "Monitor for specific symptoms"]
-        • [Lifestyle consideration - if applicable]
-
-        ❓ **QUESTIONS TO ASK YOUR DOCTOR**
-        • "Can you explain what [specific term] means in my situation?"
-        • "What might be causing [specific finding]?"
-        • "What are the next steps we should consider?"
-
-        ⚠️ **SAFETY & NEXT STEPS**
-        - Highlight any values that need urgent attention
-        - Mention when to seek immediate care
-        - Reinforce this is educational only
-
-        CRITICAL GUIDELINES:
-        1. NEVER diagnose conditions - only explain what the numbers/terms mean
-        2. ALWAYS emphasize consulting healthcare providers
-        3. Use simple, compassionate language
-        4. Include specific numbers from the report in explanations
-        5. If information is unclear, state what's missing rather than guessing
-        6. Be culturally sensitive and age-appropriate
-            `;
+      Use simple language and avoid medical jargon. Be reassuring but honest.
+      `;
   }
 
   getContextDescription(context) {
@@ -114,51 +72,76 @@ class GeminiService {
 
   // Call Gemini API with enhanced error handling
   async callGeminiAPI(prompt) {
-    const requestBody = {
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.1,  // Very low for consistent medical responses
-        maxOutputTokens: 2000,
-        topP: 0.8,
-        topK: 40
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          {
+            text: prompt
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      topK: 40,
+      topP: 0.8,
+      maxOutputTokens: 4096,
+    },
+    safetySettings: [
+      {
+        category: "HARM_CATEGORY_HARASSMENT",
+        threshold: "BLOCK_MEDIUM_AND_ABOVE"
       },
-      safetySettings: [
-        {
-          category: "HARM_CATEGORY_MEDICAL",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT", 
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        }
-      ]
-    };
+      {
+        category: "HARM_CATEGORY_HATE_SPEECH", 
+        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+      },
+      {
+        category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+      },
+      {
+        category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+      }
+    ]
+  };
 
+  console.log('🔧 Sending request to Gemini API...');
+  
+  try {
     const response = await axios.post(GEMINI_API_URL, requestBody, {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 45000 // 45 second timeout for complex analysis
+      timeout: 30000
     });
 
-    if (response.data && response.data.candidates && response.data.candidates[0]) {
-      return response.data.candidates[0].content.parts[0].text;
+    console.log('✅ Gemini API response received');
+    
+    // Fixed response parsing based on the actual structure
+    if (response.data && 
+        response.data.candidates && 
+        response.data.candidates[0] && 
+        response.data.candidates[0].content && 
+        response.data.candidates[0].content.parts && 
+        response.data.candidates[0].content.parts[0]) {
+      
+      const text = response.data.candidates[0].content.parts[0].text;
+      console.log('📝 Extracted text length:', text.length);
+      return text;
+      
     } else {
+      console.error('❌ Unexpected response structure:', JSON.stringify(response.data, null, 2));
       throw new Error('Invalid response format from AI service');
     }
+    
+  } catch (error) {
+    console.error('❌ Gemini API call failed:', error.response?.data || error.message);
+    throw error;
   }
+}
 
   // Structure and validate the analysis response
   structureAnalysisResponse(analysis, originalText) {
@@ -206,28 +189,34 @@ class GeminiService {
 
   // Enhanced error handling
   handleGeminiError(error) {
-    if (error.response) {
-      const status = error.response.status;
-      switch (status) {
-        case 400:
-          return new Error('Invalid request to AI service. Please check the input and try again.');
-        case 401:
-          return new Error('AI service authentication failed. Please check API configuration.');
-        case 403:
-          return new Error('AI service access denied. Please check permissions.');
-        case 429:
-          return new Error('AI service rate limit exceeded. Please wait a moment and try again.');
-        case 500:
-          return new Error('AI service is temporarily unavailable. Please try again later.');
-        default:
-          return new Error(`AI service error: ${error.response.statusText}`);
-      }
-    } else if (error.request) {
-      return new Error('Unable to reach AI service. Please check your internet connection.');
-    } else {
-      return error;
+  console.error('Full error details:', error);
+  
+  if (error.response) {
+    const status = error.response.status;
+    const errorData = error.response.data;
+    
+    console.error('Gemini API Error Details:', errorData);
+    
+    switch (status) {
+      case 400:
+        return new Error(`Invalid API request: ${errorData.error?.message || 'Check your prompt format'}`);
+      case 401:
+        return new Error('Invalid API key. Please check your Gemini API key configuration.');
+      case 403:
+        return new Error('API access denied. Please check your API key permissions and billing.');
+      case 429:
+        return new Error('Rate limit exceeded. Please wait a moment and try again.');
+      case 500:
+        return new Error('Google AI service is temporarily unavailable.');
+      default:
+        return new Error(`API error ${status}: ${errorData.error?.message || 'Unknown error'}`);
     }
+  } else if (error.request) {
+    return new Error('Unable to reach Google AI service. Please check your internet connection.');
+  } else {
+    return new Error(`Request configuration error: ${error.message}`);
   }
+}
 
   // Quick analysis for shorter texts
   async quickAnalysis(medicalText) {

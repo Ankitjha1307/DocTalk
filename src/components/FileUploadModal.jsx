@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback } from 'react';
-  import {useAIPipeline} from '../hooks/useAIPipeline'; // Adjusted path
+import { useAIPipeline } from '../hooks/useAIPipeline';
+import privacyService from '../services/privacyService';
 
 const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
   
-  // Use the REAL AI pipeline instead of fake upload
+  // Use the REAL AI pipeline
   const { 
     pipelineState, 
     processMedicalDocument, 
@@ -36,16 +37,16 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
     setIsDragging(false);
     
     const droppedFiles = Array.from(e.dataTransfer.files);
-    processFiles(droppedFiles);
+    handleFiles(droppedFiles);
   }, []);
 
   const handleFileSelect = (e) => {
     const selectedFiles = Array.from(e.target.files);
-    processFiles(selectedFiles);
+    handleFiles(selectedFiles);
   };
 
-  const processFiles = async (newFiles) => {
-    // For now, only process first file
+  // JUST STORE FILES, don't process immediately
+  const handleFiles = (newFiles) => {
     if (newFiles.length > 0) {
       const file = newFiles[0];
       
@@ -74,23 +75,40 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
       }];
 
       setFiles(filesWithPreview);
-      
-      // START REAL AI PROCESSING
-      try {
-        const analysis = await processMedicalDocument(file, { 
-          context: getFileContext(file.name) 
-        });
-        
-        // When analysis is complete, pass results to parent
-        if (onAnalysisComplete) {
-          onAnalysisComplete(analysis, file);
-        }
-        
-      } catch (error) {
-        console.error('Processing error:', error);
-      }
     }
   };
+
+  // NEW: Function to START the AI processing
+  const startProcessing = async () => {
+  if (files.length === 0) {
+    alert('Please select a file first');
+    return;
+  }
+  
+  const file = files[0].file;
+  
+  try {
+    console.log('🚀 Starting AI processing with privacy protection...');
+    
+    // Import privacy service to show it's working
+    const PrivacyService = await import('../services/privacyService.js');
+    console.log('✅ Privacy protection module loaded');
+    
+    const analysis = await processMedicalDocument(file, { 
+      context: getFileContext(file.name) 
+    });
+    
+    console.log('✅ AI analysis completed with privacy protection');
+    
+    if (onAnalysisComplete) {
+      onAnalysisComplete(analysis, file);
+    }
+    
+  } catch (error) {
+    console.error('❌ Processing failed:', error);
+    alert(`Processing failed: ${error.message}\n\nPlease check:\n- Your Gemini API key\n- File format\n- Internet connection`);
+  }
+};
 
   const getFileContext = (filename) => {
     const name = filename.toLowerCase();
@@ -227,16 +245,17 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <span style={{ marginRight: '0.75rem', color: '#3b82f6' }}>🛡️</span>
               <div>
-                <strong style={{ color: '#1e40af' }}>Privacy Protected:</strong>
+                <strong style={{ color: '#1e40af' }}>Advanced Privacy Protection</strong>
                 <p style={{ color: '#1d4ed8', fontSize: '0.875rem', margin: '0.25rem 0 0 0' }}>
-                  Personal information is automatically removed. Only medical data is processed.
+                  All personal information (names, IDs, contact details) is automatically removed before processing. 
+                  Only medical data is sent to AI for analysis.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Drag & Drop Area - Only show if not processing */}
-          {!pipelineState.isProcessing && (
+          {/* Drag & Drop Area - Only show if no file selected and not processing */}
+          {files.length === 0 && !pipelineState.isProcessing && (
             <div
               style={{
                 border: `2px dashed ${isDragging ? '#3b82f6' : '#d1d5db'}`,
@@ -280,6 +299,52 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
             style={{ display: 'none' }}
             disabled={pipelineState.stage === 'processing'}
           />
+
+          {/* File Ready to Process */}
+          {files.length > 0 && !pipelineState.isProcessing && !pipelineState.isComplete && (
+            <div style={{
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #7dd3fc',
+              borderRadius: '8px',
+              padding: '1.5rem',
+              textAlign: 'center'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ fontSize: '1.875rem', color: '#0ea5e9', marginBottom: '1rem' }}>📄</div>
+                <h4 style={{
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  File Ready for Analysis
+                </h4>
+                <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+                  Click "Analyze with AI" to extract and simplify your medical report
+                </p>
+                
+                <button
+                  onClick={startProcessing}
+                  style={{
+                    padding: '0.75rem 2rem',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span>🤖</span>
+                  <span>Analyze with AI</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Real Processing Status */}
           {pipelineState.isProcessing && (
@@ -539,6 +604,24 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
               >
                 <span>⏳</span>
                 <span>Processing...</span>
+              </button>
+            ) : files.length > 0 ? (
+              <button
+                onClick={startProcessing}
+                style={{
+                  padding: '0.5rem 1.5rem',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <span>🤖</span>
+                <span>Analyze with AI</span>
               </button>
             ) : (
               <button
