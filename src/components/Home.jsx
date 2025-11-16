@@ -427,7 +427,7 @@ const DocTalkLanding = ({onOpenChatbot, onOpenFileUpload}) => {
               { name: 'Backend', tech: 'Node.js + Express', icon: 'fa-server' },
               { name: 'Database', tech: 'MongoDB / Firebase', icon: 'fa-database' },
               { name: 'AI Layer', tech: 'Gemini API', icon: 'fa-brain' },
-              { name: 'Authentication', tech: 'Google Auth / OTP', icon: 'fa-user-shield' },
+              // { name: 'Authentication', tech: 'Google Auth / OTP', icon: 'fa-user-shield' },
               { name: 'Hosting', tech: 'Vercel / Render', icon: 'fa-cloud' }
             ].map((item, index) => (
               <div key={index} className="bg-gray-50 rounded-xl p-6 text-center hover:shadow-md transition-shadow">
@@ -500,7 +500,7 @@ const DocTalkLanding = ({onOpenChatbot, onOpenFileUpload}) => {
       </section>
 
       {/* Business Model Section */}
-      <section id="business" className="py-16 bg-white">
+      {/* <section id="business" className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Sustainable Growth: Business Model</h2>
@@ -542,7 +542,7 @@ const DocTalkLanding = ({onOpenChatbot, onOpenFileUpload}) => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-16 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">

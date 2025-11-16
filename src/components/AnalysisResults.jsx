@@ -5,61 +5,155 @@ const AnalysisResults = ({ analysis, file, onClose, onNewAnalysis }) => {
   if (!analysis) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">Medical Analysis Results</h2>
-            <p className="text-gray-600 mt-1">
-              {file?.name} • {new Date(analysis.timestamp).toLocaleString()}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl"
-          >
-            ✕
-          </button>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200">
+    {/* Header */}
+    <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="flex items-center space-x-3">
+        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+          <i className="fas fa-file-medical-alt text-blue-600 text-lg"></i>
         </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[70vh]">
-          {analysis.rawAnalysis ? (
-            <div className="prose max-w-none">
-              <pre className="whitespace-pre-wrap font-sans text-gray-800">
-                {analysis.rawAnalysis}
-              </pre>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No analysis content available.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-between items-center p-6 border-t bg-gray-50">
-          <div className="text-sm text-gray-600">
-            {analysis.wordCount} words analyzed
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={onNewAnalysis}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              New Analysis
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Close
-            </button>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Medical Analysis Results</h2>
+          <p className="text-gray-600 mt-1 flex items-center space-x-2">
+            <i className="fas fa-file text-gray-400 text-sm"></i>
+            <span className="text-sm">{file?.name}</span>
+            <span className="text-gray-300">•</span>
+            <i className="fas fa-clock text-gray-400 text-sm"></i>
+            <span className="text-sm">{new Date(analysis.timestamp).toLocaleString()}</span>
+          </p>
         </div>
       </div>
+      <button
+        onClick={onClose}
+        className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+      >
+        <i className="fas fa-times text-lg"></i>
+      </button>
     </div>
+
+    {/* Content */}
+    <div className="p-6 overflow-y-auto max-h-[70vh] bg-gray-50/50">
+      {analysis.rawAnalysis ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <i className="fas fa-brain text-green-600 text-sm"></i>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800">AI Analysis</h3>
+            </div>
+            <div className="flex items-center space-x-4 text-sm text-gray-500">
+              <span className="flex items-center space-x-1">
+                <i className="fab fa-wordpress text-blue-500"></i>
+                <span>{analysis.wordCount} words</span>
+              </span>
+              <span className="flex items-center space-x-1">
+                <i className="fas fa-clock text-purple-500"></i>
+                <span>{Math.ceil(analysis.wordCount / 200)} min read</span>
+              </span>
+            </div>
+          </div>
+          
+          <div className="prose max-w-none">
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mb-6">
+              <div className="flex items-start space-x-3">
+                <i className="fas fa-info-circle text-blue-500 mt-1 text-lg"></i>
+                <div>
+                  <p className="text-blue-800 font-medium mb-1">AI-Powered Analysis</p>
+                  <p className="text-blue-700 text-sm">
+                    This analysis is generated by our AI assistant. Please consult with a healthcare professional for medical decisions.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="whitespace-pre-wrap font-sans text-gray-800 leading-relaxed text-[15px]">
+              {analysis.rawAnalysis.split('\n').map((paragraph, index) => (
+                <p key={index} className="mb-4">
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i className="fas fa-file-search text-gray-400 text-2xl"></i>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">No Analysis Available</h3>
+          <p className="text-gray-500 max-w-md mx-auto">
+            We couldn't generate an analysis for this file. Please try again with a different medical document.
+          </p>
+        </div>
+      )}
+    </div>
+
+    {/* Footer */}
+    <div className="flex justify-between items-center p-6 border-t border-gray-200 bg-white">
+      <div className="flex items-center space-x-4 text-sm text-gray-600">
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span>Analysis Complete</span>
+        </div>
+        <div className="flex items-center space-x-1">
+          <i className="fas fa-shield-alt text-green-500"></i>
+          <span>Secure & Private</span>
+        </div>
+      </div>
+      
+      <div className="flex gap-3">
+        <button
+          onClick={onNewAnalysis}
+          className="px-5 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2 font-medium"
+        >
+          <i className="fas fa-plus"></i>
+          <span>New Analysis</span>
+        </button>
+        {/* <button
+          onClick={() => {
+            // Add download functionality
+            downloadAnalysis(analysis);
+          }}
+          className="px-5 py-2.5 border border-blue-200 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 font-medium"
+        >
+          <i className="fas fa-download"></i>
+          <span>Save Report</span>
+        </button> */}
+        <button
+          onClick={onClose}
+          className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 font-medium shadow-sm"
+        >
+          <i className="fas fa-check"></i>
+          <span>Close</span>
+        </button>
+      </div>
+    </div>
+
+    {/* Quick Actions Bar */}
+    <div className="bg-gray-50 border-t border-gray-200 p-4">
+      <div className="flex justify-center space-x-6">
+        <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
+          <i className="fas fa-print"></i>
+          <span>Print</span>
+        </button>
+        <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
+          <i className="fas fa-share-alt"></i>
+          <span>Share</span>
+        </button>
+        <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
+          <i className="fas fa-bookmark"></i>
+          <span>Save to Records</span>
+        </button>
+        <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
+          <i className="fas fa-question-circle"></i>
+          <span>Get Help</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
   );
 };
 

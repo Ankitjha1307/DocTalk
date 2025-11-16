@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { useAIPipeline } from '../hooks/useAIPipeline';
 import privacyService from '../services/privacyService';
-
+import LoadingOverlay from './LoadingOverlay.jsx'
 const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
+  const [showLoading, setShowLoading] = useState(false);
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
@@ -88,6 +89,8 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
   const file = files[0].file;
   
   try {
+        setShowLoading(true);
+
     console.log('🚀 Starting AI processing with privacy protection...');
     
     // Import privacy service to show it's working
@@ -108,6 +111,7 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
     console.error('❌ Processing failed:', error);
     alert(`Processing failed: ${error.message}\n\nPlease check:\n- Your Gemini API key\n- File format\n- Internet connection`);
   }
+  finally{    setShowLoading(false);}
 };
 
   const getFileContext = (filename) => {
@@ -164,7 +168,17 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
 
   if (!isOpen) return null;
 
-  return (
+  return (<>
+    {showLoading && (
+  <LoadingOverlay 
+    message={
+      pipelineState.stage === "extracting" 
+        ? "Extracting text from your document..." 
+        : "AI is analyzing your medical report..."
+    }
+    subMessage="This usually takes 3–10 seconds"
+  />
+)}
     <div style={{
       position: 'fixed',
       top: 0,
@@ -645,7 +659,7 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div></>
   );
 };
 
