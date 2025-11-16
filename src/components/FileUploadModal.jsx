@@ -19,7 +19,7 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
   // Supported file types
   const supportedFormats = {
     'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.bmp'],
-    'application/pdf': ['.pdf'],
+    // 'application/pdf': ['.pdf'],
     'text/plain': ['.txt']
   };
 
@@ -57,7 +57,7 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
                     Object.keys(supportedFormats).some(type => file.type.match(type));
       
       if (!isValid) {
-        alert(`File type not supported: ${file.name}. Please use images, PDFs, or text files.`);
+        alert(`File type not supported: ${file.name}. Please use images, or text files.`);
         return;
       }
       
@@ -161,7 +161,7 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
 
   const getFileIcon = (fileType) => {
     if (fileType.startsWith('image/')) return '📷';
-    if (fileType === 'application/pdf') return '📄';
+    // if (fileType === 'application/pdf') return '📄';
     if (fileType.startsWith('text/')) return '📝';
     return '📎';
   };
@@ -299,7 +299,7 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
                   or <span style={{ color: '#3b82f6', fontWeight: '500' }}>browse files</span>
                 </p>
                 <p style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
-                  Supports: JPG, PNG, PDF, TXT (Max 10MB)
+                  Supports: JPG, PNG, TXT (Max 10MB)
                 </p>
               </div>
             </div>
@@ -309,7 +309,7 @@ const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
             type="file"
             ref={fileInputRef}
             onChange={handleFileSelect}
-            accept=".jpg,.jpeg,.png,.pdf,.txt"
+            accept=".jpg,.jpeg,.png,.txt"
             style={{ display: 'none' }}
             disabled={pipelineState.stage === 'processing'}
           />
