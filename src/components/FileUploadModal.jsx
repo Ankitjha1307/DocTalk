@@ -1,18 +1,24 @@
 import { useState, useRef, useCallback } from 'react';
+  import {useAIPipeline} from '../hooks/useAIPipeline'; // Adjusted path
 
-const FileUploadModal = ({ isOpen, onClose, onFilesUpload }) => {
+const FileUploadModal = ({ isOpen, onClose, onAnalysisComplete }) => {
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({});
   const fileInputRef = useRef(null);
+  
+  // Use the REAL AI pipeline instead of fake upload
+  const { 
+    pipelineState, 
+    processMedicalDocument, 
+    resetPipeline,
+    getOverallProgress 
+  } = useAIPipeline();
 
   // Supported file types
   const supportedFormats = {
     'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.bmp'],
     'application/pdf': ['.pdf'],
-    'text/plain': ['.txt'],
-    'application/msword': ['.doc'],
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+    'text/plain': ['.txt']
   };
 
   const handleDragOver = useCallback((e) => {
@@ -38,36 +44,66 @@ const FileUploadModal = ({ isOpen, onClose, onFilesUpload }) => {
     processFiles(selectedFiles);
   };
 
-  const processFiles = (newFiles) => {
-    const validFiles = newFiles.filter(file => {
+  const processFiles = async (newFiles) => {
+    // For now, only process first file
+    if (newFiles.length > 0) {
+      const file = newFiles[0];
+      
+      // Validate file type
       const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
       const isValid = Object.values(supportedFormats).flat().includes(fileExtension) ||
                     Object.keys(supportedFormats).some(type => file.type.match(type));
       
       if (!isValid) {
-        alert(`File type not supported: ${file.name}`);
-        return false;
+        alert(`File type not supported: ${file.name}. Please use images, PDFs, or text files.`);
+        return;
       }
       
-      if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        alert(`File too large: ${file.name}. Maximum size is 50MB.`);
-        return false;
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File too large: ${file.name}. Maximum size is 10MB.`);
+        return;
       }
+
+      const filesWithPreview = [{
+        file,
+        id: Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      }];
+
+      setFiles(filesWithPreview);
       
-      return true;
-    });
+      // START REAL AI PROCESSING
+      try {
+        const analysis = await processMedicalDocument(file, { 
+          context: getFileContext(file.name) 
+        });
+        
+        // When analysis is complete, pass results to parent
+        if (onAnalysisComplete) {
+          onAnalysisComplete(analysis, file);
+        }
+        
+      } catch (error) {
+        console.error('Processing error:', error);
+      }
+    }
+  };
 
-    const filesWithPreview = validFiles.map(file => ({
-      file,
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-      uploadProgress: 0
-    }));
-
-    setFiles(prev => [...prev, ...filesWithPreview]);
+  const getFileContext = (filename) => {
+    const name = filename.toLowerCase();
+    if (name.includes('lab') || name.includes('test') || name.includes('blood')) {
+      return 'lab';
+    } else if (name.includes('discharge') || name.includes('summary')) {
+      return 'discharge';
+    } else if (name.includes('prescription') || name.includes('med')) {
+      return 'prescription';
+    } else if (name.includes('xray') || name.includes('mri') || name.includes('ct') || name.includes('scan')) {
+      return 'radiology';
+    }
+    return 'general';
   };
 
   const removeFile = (fileId) => {
@@ -78,38 +114,7 @@ const FileUploadModal = ({ isOpen, onClose, onFilesUpload }) => {
       }
       return prev.filter(f => f.id !== fileId);
     });
-  };
-
-  const simulateUpload = (fileId) => {
-    setUploadProgress(prev => ({ ...prev, [fileId]: 0 }));
-    
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        const newProgress = (prev[fileId] || 0) + Math.random() * 20;
-        if (newProgress >= 100) {
-          clearInterval(interval);
-          return { ...prev, [fileId]: 100 };
-        }
-        return { ...prev, [fileId]: newProgress };
-      });
-    }, 200);
-  };
-
-  const handleUpload = async () => {
-    if (files.length === 0) return;
-
-    // Simulate upload progress for each file
-    files.forEach(file => {
-      simulateUpload(file.id);
-    });
-
-    // Simulate complete upload after 3 seconds
-    setTimeout(() => {
-      if (onFilesUpload) {
-        onFilesUpload(files);
-      }
-      handleClose();
-    }, 3000);
+    resetPipeline();
   };
 
   const handleClose = () => {
@@ -120,7 +125,7 @@ const FileUploadModal = ({ isOpen, onClose, onFilesUpload }) => {
       }
     });
     setFiles([]);
-    setUploadProgress({});
+    resetPipeline();
     onClose();
   };
 
@@ -133,127 +138,285 @@ const FileUploadModal = ({ isOpen, onClose, onFilesUpload }) => {
   };
 
   const getFileIcon = (fileType) => {
-    if (fileType.startsWith('image/')) return 'fas fa-image';
-    if (fileType === 'application/pdf') return 'fas fa-file-pdf';
-    if (fileType.startsWith('text/')) return 'fas fa-file-alt';
-    if (fileType.includes('word') || fileType.includes('document')) return 'fas fa-file-word';
-    return 'fas fa-file';
+    if (fileType.startsWith('image/')) return '📷';
+    if (fileType === 'application/pdf') return '📄';
+    if (fileType.startsWith('text/')) return '📝';
+    return '📎';
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/10 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-white rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '1rem',
+      zIndex: 50
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '600px',
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: '90vh'
+      }}>
         
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '1.5rem',
+          borderBottom: '1px solid #e5e7eb'
+        }}>
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Upload Medical Files</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Upload lab reports, prescriptions, medical images, and other documents
+            <h2 style={{
+              fontSize: '1.5rem',
+              fontWeight: 'bold',
+              color: '#1f2937',
+              margin: 0
+            }}>Upload Medical File</h2>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              margin: '0.25rem 0 0 0'
+            }}>
+              Upload lab reports, prescriptions, or medical documents
             </p>
           </div>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            style={{
+              color: '#9ca3af',
+              background: 'none',
+              border: 'none',
+              fontSize: '1.25rem',
+              cursor: 'pointer'
+            }}
+            disabled={pipelineState.stage === 'processing'}
           >
-            <i className="fas fa-times text-xl"></i>
+            ✕
           </button>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* Drag & Drop Area */}
-          <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
-              isDragging 
-                ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="max-w-md mx-auto">
-              <i className="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-4"></i>
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                Drop your files here
-              </h3>
-              <p className="text-gray-500 mb-4">
-                or <span className="text-blue-500 font-medium">browse files</span>
-              </p>
-              <p className="text-sm text-gray-400">
-                Supports: {Object.values(supportedFormats).flat().join(', ')} (Max 50MB each)
-              </p>
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '1.5rem'
+        }}>
+          {/* Privacy Notice */}
+          <div style={{
+            backgroundColor: '#dbeafe',
+            border: '1px solid #93c5fd',
+            borderRadius: '8px',
+            padding: '1rem',
+            marginBottom: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ marginRight: '0.75rem', color: '#3b82f6' }}>🛡️</span>
+              <div>
+                <strong style={{ color: '#1e40af' }}>Privacy Protected:</strong>
+                <p style={{ color: '#1d4ed8', fontSize: '0.875rem', margin: '0.25rem 0 0 0' }}>
+                  Personal information is automatically removed. Only medical data is processed.
+                </p>
+              </div>
             </div>
           </div>
+
+          {/* Drag & Drop Area - Only show if not processing */}
+          {!pipelineState.isProcessing && (
+            <div
+              style={{
+                border: `2px dashed ${isDragging ? '#3b82f6' : '#d1d5db'}`,
+                borderRadius: '8px',
+                padding: '2rem',
+                textAlign: 'center',
+                transition: 'all 0.3s',
+                backgroundColor: isDragging ? '#dbeafe' : '#f9fafb',
+                cursor: 'pointer'
+              }}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div style={{ maxWidth: '400px', margin: '0 auto' }}>
+                <div style={{ fontSize: '2.25rem', color: '#3b82f6', marginBottom: '1rem' }}>📤</div>
+                <h3 style={{
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Drop your medical file here
+                </h3>
+                <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
+                  or <span style={{ color: '#3b82f6', fontWeight: '500' }}>browse files</span>
+                </p>
+                <p style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
+                  Supports: JPG, PNG, PDF, TXT (Max 10MB)
+                </p>
+              </div>
+            </div>
+          )}
 
           <input
             type="file"
             ref={fileInputRef}
             onChange={handleFileSelect}
-            multiple
-            accept={Object.keys(supportedFormats).join(',')}
-            className="hidden"
+            accept=".jpg,.jpeg,.png,.pdf,.txt"
+            style={{ display: 'none' }}
+            disabled={pipelineState.stage === 'processing'}
           />
 
+          {/* Real Processing Status */}
+          {pipelineState.isProcessing && (
+            <div style={{
+              backgroundColor: '#dbeafe',
+              border: '1px solid #93c5fd',
+              borderRadius: '8px',
+              padding: '1.5rem',
+              textAlign: 'center'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ fontSize: '1.875rem', color: '#3b82f6', marginBottom: '1rem' }}>🤖</div>
+                <h4 style={{
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  {pipelineState.stage === 'extracting' ? 'Reading Document...' : 'AI Analysis...'}
+                </h4>
+                
+                {/* Real Progress Bar */}
+                <div style={{
+                  width: '100%',
+                  backgroundColor: '#e5e7eb',
+                  borderRadius: '9999px',
+                  height: '0.75rem',
+                  marginBottom: '0.5rem'
+                }}>
+                  <div
+                    style={{
+                      backgroundColor: '#10b981',
+                      height: '0.75rem',
+                      borderRadius: '9999px',
+                      transition: 'all 0.3s',
+                      width: `${getOverallProgress()}%`
+                    }}
+                  ></div>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                  {Math.round(getOverallProgress())}% complete
+                </p>
+                
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                  {pipelineState.stage === 'extracting' 
+                    ? 'Extracting text from your document...' 
+                    : 'Gemini AI is analyzing medical content...'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Selected Files List */}
-          {files.length > 0 && (
-            <div className="mt-6">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">
-                Selected Files ({files.length})
+          {files.length > 0 && !pipelineState.isProcessing && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <h4 style={{
+                fontSize: '1.125rem',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '1rem'
+              }}>
+                Selected File
               </h4>
-              <div className="space-y-3 max-h-60 overflow-y-auto">
+              <div>
                 {files.map((file) => (
                   <div
                     key={file.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '1rem',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb'
+                    }}
                   >
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
                       {file.preview ? (
                         <img
                           src={file.preview}
                           alt={file.name}
-                          className="w-12 h-12 object-cover rounded border"
+                          style={{
+                            width: '3rem',
+                            height: '3rem',
+                            objectFit: 'cover',
+                            borderRadius: '4px',
+                            border: '1px solid #e5e7eb'
+                          }}
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-blue-100 rounded flex items-center justify-center">
-                          <i className={`${getFileIcon(file.type)} text-blue-600`}></i>
+                        <div style={{
+                          width: '3rem',
+                          height: '3rem',
+                          backgroundColor: '#dbeafe',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <span style={{ fontSize: '1.25rem' }}>{getFileIcon(file.type)}</span>
                         </div>
                       )}
                       
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-800 truncate">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{
+                          fontWeight: '500',
+                          color: '#374151',
+                          margin: 0,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
                           {file.name}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p style={{
+                          fontSize: '0.875rem',
+                          color: '#6b7280',
+                          margin: 0
+                        }}>
                           {formatFileSize(file.size)}
                         </p>
-                        
-                        {/* Progress Bar */}
-                        {uploadProgress[file.id] !== undefined && (
-                          <div className="mt-2">
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${uploadProgress[file.id]}%` }}
-                              ></div>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {Math.round(uploadProgress[file.id])}% uploaded
-                            </p>
-                          </div>
-                        )}
                       </div>
                     </div>
                     
                     <button
                       onClick={() => removeFile(file.id)}
-                      className="text-red-500 hover:text-red-700 transition-colors ml-4"
+                      style={{
+                        color: '#ef4444',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        marginLeft: '1rem'
+                      }}
+                      disabled={pipelineState.stage === 'processing'}
                     >
-                      <i className="fas fa-trash"></i>
+                      🗑️
                     </button>
                   </div>
                 ))}
@@ -261,61 +424,143 @@ const FileUploadModal = ({ isOpen, onClose, onFilesUpload }) => {
             </div>
           )}
 
-          {/* File Type Info */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h5 className="font-semibold text-blue-800 mb-2">Supported File Types:</h5>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="flex items-center space-x-2">
-                <i className="fas fa-image text-blue-600"></i>
-                <span>Images (JPG, PNG, GIF, BMP)</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <i className="fas fa-file-pdf text-red-600"></i>
-                <span>PDF Documents</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <i className="fas fa-file-alt text-green-600"></i>
-                <span>Text Files (TXT)</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <i className="fas fa-file-word text-blue-700"></i>
-                <span>Word Documents</span>
+          {/* Analysis Complete */}
+          {pipelineState.isComplete && (
+            <div style={{
+              marginTop: '1.5rem',
+              backgroundColor: '#dcfce7',
+              border: '1px solid #86efac',
+              borderRadius: '8px',
+              padding: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ color: '#16a34a', fontSize: '1.25rem', marginRight: '0.75rem' }}>✅</span>
+                <div>
+                  <strong style={{ color: '#166534' }}>Analysis Complete!</strong>
+                  <p style={{ color: '#15803d', fontSize: '0.875rem', margin: '0.25rem 0 0 0' }}>
+                    Medical report has been processed successfully.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Error State */}
+          {pipelineState.hasError && (
+            <div style={{
+              marginTop: '1.5rem',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              padding: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ color: '#dc2626', fontSize: '1.25rem', marginRight: '0.75rem' }}>❌</span>
+                <div>
+                  <strong style={{ color: '#991b1b' }}>Processing Error</strong>
+                  <p style={{ color: '#dc2626', fontSize: '0.875rem', margin: '0.25rem 0 0 0' }}>
+                    {pipelineState.error}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-          <div className="text-sm text-gray-600">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '1.5rem',
+          borderTop: '1px solid #e5e7eb',
+          backgroundColor: '#f9fafb',
+          borderRadius: '0 0 12px 12px'
+        }}>
+          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
             {files.length > 0 ? (
               <span>
-                {files.length} file{files.length > 1 ? 's' : ''} selected •{' '}
-                {formatFileSize(files.reduce((acc, file) => acc + file.size, 0))}
+                {files.length} file selected • {formatFileSize(files[0]?.size || 0)}
               </span>
             ) : (
               <span>No files selected</span>
             )}
           </div>
           
-          <div className="flex space-x-3">
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button
               onClick={handleClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              style={{
+                padding: '0.5rem 1.5rem',
+                border: '1px solid #d1d5db',
+                color: '#374151',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                backgroundColor: 'white'
+              }}
+              disabled={pipelineState.stage === 'processing'}
             >
               Cancel
             </button>
-            <button
-              onClick={handleUpload}
-              disabled={files.length === 0}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              <i className="fas fa-upload"></i>
-              <span>Upload Files</span>
-            </button>
+            
+            {/* Show different button based on state */}
+            {pipelineState.isComplete ? (
+              <button
+                onClick={handleClose}
+                style={{
+                  padding: '0.5rem 1.5rem',
+                  backgroundColor: '#16a34a',
+                  color: 'white',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <span>✅</span>
+                <span>Done</span>
+              </button>
+            ) : pipelineState.isProcessing ? (
+              <button
+                disabled
+                style={{
+                  padding: '0.5rem 1.5rem',
+                  backgroundColor: '#60a5fa',
+                  color: 'white',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <span>⏳</span>
+                <span>Processing...</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  padding: '0.5rem 1.5rem',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <span>➕</span>
+                <span>Add File</span>
+              </button>
+            )}
           </div>
         </div>
-
       </div>
     </div>
   );

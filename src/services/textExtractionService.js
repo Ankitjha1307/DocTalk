@@ -1,5 +1,9 @@
 import Tesseract from 'tesseract.js';
-import pdf from 'pdf-parse';
+let pdf;
+// Dynamic import to handle the module export issue
+import('pdf-parse').then(module => {
+  pdf = module.default || module;
+});
 
 class TextExtractionService {
   
