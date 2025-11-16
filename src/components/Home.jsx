@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const DocTalkLanding = () => {
+const DocTalkLanding = ({onOpenChatbot,onOpenFileUpload}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -9,6 +9,17 @@ const DocTalkLanding = () => {
 
       {/* Hero Section */}
       <section className="py-16 md:py-24 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+        <button
+          onClick={onOpenChatbot}
+          className="fixed bottom-6 right-6 z-40 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-2xl group"
+          style={{ width: '60px', height: '60px' }}
+        >
+          <i className="fas fa-robot text-xl"></i>
+          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
+            <i className="fas fa-plus"></i>
+          </div>
+        </button>
+
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1 mb-6">
@@ -24,7 +35,7 @@ const DocTalkLanding = () => {
               DocTalk simplifies healthcare for everyone. Understand medical reports, access reliable medicine information, track health trends, and stay prepared with reminders—all in one secure platform.
             </p>
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <button className="px-8 py-3 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-colors shadow-lg">
+              <button className="px-8 py-3 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-colors shadow-lg"    onClick={onOpenFileUpload}>
                 Try DocTalk Free
               </button>
               <button className="px-8 py-3 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition-colors">
