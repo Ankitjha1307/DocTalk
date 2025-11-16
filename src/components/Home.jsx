@@ -150,10 +150,10 @@ const DocTalkLanding = ({onOpenChatbot, onOpenFileUpload}) => {
                 <i className="fas fa-file-medical-alt group-hover:scale-110 transition-transform"></i>
                 <span>Try DocTalk Free</span>
               </button>
-              <button className="px-8 py-3 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition-colors flex items-center space-x-2">
+              <a href="https://drive.google.com/file/d/1wujeg6w3C7lOIA14z5UJ_50IuNRAbl8m/view?usp=drivesdk" className="px-8 py-3 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition-colors flex items-center space-x-2">
                 <i className="fas fa-play-circle"></i>
                 <span>Watch Demo</span>
-              </button>
+              </a>
             </div>
 
             {/* Quick Stats */}
