@@ -1,17 +1,13 @@
-import Sidebar from "@/components/sidebar";
-import Navbar from "@/components/navbar";
-import { ThemeProvider } from "@/components/theme-provider";
+import Sidebar from '@/components/sidebar';
+import Navbar from '@/components/navbar';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata = {
-  title: "Dashboard - DocTalk",
-  description: "Manage your health with DocTalk",
+  title: 'Dashboard - DocTalk',
+  description: 'Manage your health with DocTalk',
 };
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <div className="flex h-screen bg-background">
