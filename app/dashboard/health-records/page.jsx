@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { FileArchive, Plus, Download, X, Eye } from "lucide-react";
 
 export default function HealthRecords() {
@@ -37,10 +37,10 @@ export default function HealthRecords() {
     },
   ]);
 
-  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [selectedRecord, setSelectedRecord] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
-  const handleDeleteRecord = (id: number) => {
+  const handleDeleteRecord = (id) => {
     setRecords(records.filter((r) => r.id !== id));
   };
 
@@ -82,7 +82,7 @@ export default function HealthRecords() {
                   <FileArchive className="w-5 h-5 text-muted-foreground" />
                   <span
                     className={`px-2 py-1 rounded text-xs font-semibold ${
-                      recordTypes[record.type as keyof typeof recordTypes]
+                      recordTypes[record.type]
                     }`}
                   >
                     {record.type}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Upload, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
 import {
   LineChart,
@@ -15,7 +15,7 @@ import {
 } from "recharts";
 
 export default function ReportAnalyzer() {
-  const [reports, setReports] = useState<Array<any>>([
+  const [reports, setReports] = useState([
     {
       id: 1,
       date: "2024-02-15",
@@ -37,7 +37,7 @@ export default function ReportAnalyzer() {
     },
   ]);
 
-  const [selectedReport, setSelectedReport] = useState<any>(reports[0]);
+  const [selectedReport, setSelectedReport] = useState(reports[0]);
 
   const chartData = [
     { date: "Jan 1", hemoglobin: 9.8 },
@@ -118,8 +118,8 @@ export default function ReportAnalyzer() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {selectedReport.parameters.map((param: any, idx: number) => {
-                      const config = statusConfig[param.status as keyof typeof statusConfig];
+                    {selectedReport.parameters.map((param, idx) => {
+                      const config = statusConfig[param.status];
                       const Icon = config.icon;
                       return (
                         <div key={idx} className={`p-4 rounded-lg ${config.bg}`}>

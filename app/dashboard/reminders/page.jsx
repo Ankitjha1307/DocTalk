@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Clock, Plus, X, Check } from "lucide-react";
 
 export default function Reminders() {
@@ -66,13 +66,13 @@ export default function Reminders() {
     }
   };
 
-  const toggleReminder = (id: number) => {
+  const toggleReminder = (id) => {
     setReminders(
       reminders.map((r) => (r.id === id ? { ...r, completed: !r.completed } : r))
     );
   };
 
-  const deleteReminder = (id: number) => {
+  const deleteReminder = (id) => {
     setReminders(reminders.filter((r) => r.id !== id));
   };
 

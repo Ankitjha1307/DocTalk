@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Bell, Lock, User, Eye, LogOut } from "lucide-react";
 
 export default function Settings() {
@@ -15,7 +15,7 @@ export default function Settings() {
     privateProfile: true,
   });
 
-  const handleToggle = (key: string) => {
+  const handleToggle = (key) => {
     setSettings({ ...settings, [key]: !settings[key] });
   };
 
@@ -142,14 +142,14 @@ export default function Settings() {
                   <button
                     onClick={() => handleToggle(item.key)}
                     className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${
-                      settings[item.key as keyof typeof settings]
+                      settings[item.key]
                         ? "bg-primary"
                         : "bg-muted"
                     }`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                        settings[item.key as keyof typeof settings]
+                        settings[item.key]
                           ? "translate-x-5"
                           : "translate-x-0.5"
                       }`}

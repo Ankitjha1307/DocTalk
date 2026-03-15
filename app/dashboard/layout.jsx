@@ -1,6 +1,6 @@
-import Sidebar from '@/components/sidebar';
-import Navbar from '@/components/navbar';
-import { ThemeProvider } from '@/components/theme-provider';
+import Sidebar from '../../components/sidebar';
+import Navbar from '../../components/navbar';
+import { ThemeProvider } from '../../components/theme-provider';
 
 export const metadata = {
   title: 'Dashboard - DocTalk',

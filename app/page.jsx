@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "../components/ui/button";
 import {
   BarChart3,
   Pill,
@@ -279,7 +279,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2024 DocTalk. All rights reserved.</p>
+            <p>&copy; 2026 DocTalk. All rights reserved.</p>
           </div>
         </div>
       </footer>

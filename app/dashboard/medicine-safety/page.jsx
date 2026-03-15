@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { X, Plus, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
 
 export default function MedicineSafety() {
-  const [medicines, setMedicines] = useState<string[]>(["Ibuprofen", "Aspirin"]);
+  const [medicines, setMedicines] = useState(["Ibuprofen", "Aspirin"]);
   const [newMedicine, setNewMedicine] = useState("");
 
   const interactions = [
@@ -28,7 +28,7 @@ export default function MedicineSafety() {
     }
   };
 
-  const handleRemoveMedicine = (index: number) => {
+  const handleRemoveMedicine = (index) => {
     setMedicines(medicines.filter((_, i) => i !== index));
   };
 

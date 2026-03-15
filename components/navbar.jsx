@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Search, User, Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../components/ui/button";
 import { useTheme } from "next-themes";
 
 export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <nav className="fixed top-0 right-0 left-0 lg:left-64 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-40">
@@ -37,17 +42,22 @@ export default function Navbar() {
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             className="p-2 rounded-lg hover:bg-muted transition-colors"
           >
-            {theme === "light" ? (
-              <Moon className="w-5 h-5" />
+            {mounted ? (
+              theme === "light" ? (
+                <Moon className="w-5 h-5" />
+              ) : (
+                <Sun className="w-5 h-5" />
+              )
             ) : (
-              <Sun className="w-5 h-5" />
+              // Placeholder with same dimensions to prevent layout shift
+              <div className="w-5 h-5" />
             )}
           </button>
 
           {/* User Avatar */}
-          <button className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
-            AJ
-          </button>
+<button className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+  <User className="w-5 h-5" />
+</button>
         </div>
       </div>
     </nav>

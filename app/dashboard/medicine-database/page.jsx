@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Search, ChevronDown } from "lucide-react";
 
 export default function MedicineDatabase() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedMedicine, setSelectedMedicine] = useState<any>(null);
+  const [selectedMedicine, setSelectedMedicine] = useState(null);
 
   const medicines = [
     {
