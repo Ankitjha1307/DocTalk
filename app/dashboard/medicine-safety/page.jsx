@@ -3,38 +3,57 @@
 import { useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
-import { X, Plus, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
+import { X, Plus, CheckCircle } from "lucide-react";
+
+const BASE_URL = "https://doctalk-production-a83f.up.railway.app";
 
 export default function MedicineSafety() {
-  const [medicines, setMedicines] = useState(["Ibuprofen", "Aspirin"]);
+  const [medicines, setMedicines] = useState([]);
   const [newMedicine, setNewMedicine] = useState("");
-
-  const interactions = [
-    {
-      pair: "Ibuprofen + Aspirin",
-      severity: "DANGEROUS",
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-      description: "Increased bleeding risk. Using both together can lead to severe gastrointestinal bleeding.",
-      recommendation: "Use only one NSAID. Consult your doctor before taking both.",
-      alternative: "Paracetamol",
-    },
-  ];
+  const [interactionResult, setInteractionResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [checked, setChecked] = useState(false);
 
   const handleAddMedicine = () => {
-    if (newMedicine.trim()) {
-      setMedicines([...medicines, newMedicine]);
+    if (newMedicine.trim() && !medicines.includes(newMedicine.trim())) {
+      setMedicines([...medicines, newMedicine.trim()]);
       setNewMedicine("");
+      setInteractionResult(null);
+      setChecked(false);
     }
   };
 
   const handleRemoveMedicine = (index) => {
     setMedicines(medicines.filter((_, i) => i !== index));
+    setInteractionResult(null);
+    setChecked(false);
+  };
+
+  const handleCheckInteractions = async () => {
+    if (medicines.length < 2) {
+      alert("Please add at least 2 medicines to check interactions.");
+      return;
+    }
+    setLoading(true);
+    setChecked(true);
+
+    try {
+      const res = await fetch(`${BASE_URL}/api/medicine/interactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ medicines }),
+      });
+      const data = await res.json();
+      setInteractionResult(data);
+    } catch (error) {
+      setInteractionResult(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Drug Interaction Checker</h1>
         <p className="text-muted-foreground mt-2">
@@ -52,7 +71,7 @@ export default function MedicineSafety() {
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Enter medicine name..."
+                placeholder="Enter medicine name (e.g. Aspirin, Warfarin)..."
                 value={newMedicine}
                 onChange={(e) => setNewMedicine(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleAddMedicine()}
@@ -63,7 +82,6 @@ export default function MedicineSafety() {
               </Button>
             </div>
 
-            {/* Added Medicines */}
             {medicines.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {medicines.map((medicine, index) => (
@@ -82,79 +100,72 @@ export default function MedicineSafety() {
                 ))}
               </div>
             )}
+
+            {medicines.length >= 2 && (
+              <Button
+                onClick={handleCheckInteractions}
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? "Checking Interactions..." : "Check Interactions"}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Results */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Interaction Results</h2>
-        {interactions.map((interaction, idx) => (
-          <Card key={idx} className={interaction.bgColor}>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-lg">{interaction.pair}</p>
-                  </div>
-                  <div className="px-3 py-1 rounded-full bg-red-600 text-white text-xs font-bold">
-                    {interaction.severity}
-                  </div>
-                </div>
+      {checked && !loading && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Interaction Results</h2>
 
-                {/* Severity Bar */}
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Severity Level</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                    <div className="bg-red-600 h-full w-3/4"></div>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Interaction Details</p>
-                  <p className="text-sm text-muted-foreground">
-                    {interaction.description}
+          {interactionResult ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Analysis: {interactionResult.medicines?.join(" + ")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="prose prose-sm max-w-none">
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {interactionResult.analysis}
                   </p>
                 </div>
 
-                {/* Recommendation */}
-                <div className="space-y-2 p-3 rounded-lg bg-background/50 border">
-                  <p className="text-sm font-medium">Recommendation</p>
-                  <p className="text-sm">{interaction.recommendation}</p>
-                </div>
-
-                {/* Alternative */}
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Suggested Alternative</p>
-                  <div className="p-3 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
-                    <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                      {interaction.alternative}
-                    </p>
-                  </div>
+                <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    ⚠️ {interactionResult.disclaimer}
+                  </p>
                 </div>
 
                 <Button className="w-full">Consult Doctor</Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <p className="text-green-900">
+                    Could not fetch interactions. Please try again.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
-        {/* No Interactions Message */}
-        {interactions.length === 0 && medicines.length >= 2 && (
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-                <p className="text-green-900">
-                  No major interactions found. Always consult your doctor.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      {loading && (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground text-center">
+              Analyzing drug interactions with AI...
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

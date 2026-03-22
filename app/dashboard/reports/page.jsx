@@ -3,62 +3,72 @@
 import { useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
-import { Upload, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { Upload } from "lucide-react";
+
+const BASE_URL = "https://doctalk-production-a83f.up.railway.app";
 
 export default function ReportAnalyzer() {
-  const [reports, setReports] = useState([
-    {
-      id: 1,
-      date: "2024-02-15",
-      name: "Blood Test Report",
-      parameters: [
-        { name: "Hemoglobin", value: "10.2", unit: "g/dL", status: "low", explanation: "Possible mild anemia. Consider iron rich foods." },
-        { name: "WBC Count", value: "7.5", unit: "K/µL", status: "normal", explanation: "Within normal range." },
-        { name: "Platelets", value: "250", unit: "K/µL", status: "normal", explanation: "Healthy platelet count." },
-      ],
-    },
-    {
-      id: 2,
-      date: "2024-01-20",
-      name: "Lipid Panel",
-      parameters: [
-        { name: "Cholesterol", value: "200", unit: "mg/dL", status: "normal", explanation: "Optimal level." },
-        { name: "Triglycerides", value: "150", unit: "mg/dL", status: "normal", explanation: "Good level." },
-      ],
-    },
-  ]);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [fileName, setFileName] = useState(null);
 
-  const [selectedReport, setSelectedReport] = useState(reports[0]);
+  const handleFileUpload = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
 
-  const chartData = [
-    { date: "Jan 1", hemoglobin: 9.8 },
-    { date: "Jan 15", hemoglobin: 10.0 },
-    { date: "Feb 1", hemoglobin: 10.2 },
-  ];
+    const allowed = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+    if (!allowed.includes(file.type)) {
+      setError("Only PDF, JPG, JPEG, PNG files are allowed.");
+      return;
+    }
 
-  const statusConfig = {
-    normal: { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
-    low: { icon: AlertTriangle, color: "text-yellow-600", bg: "bg-yellow-50" },
-    high: { icon: AlertCircle, color: "text-red-600", bg: "bg-red-50" },
-    critical: { icon: AlertCircle, color: "text-red-700", bg: "bg-red-50" },
+    if (file.size > 10 * 1024 * 1024) {
+      setError("File size must be under 10MB.");
+      return;
+    }
+
+    setFileName(file.name);
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`${BASE_URL}/api/report/analyze`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        setError(data.message || "Failed to analyze report.");
+      } else {
+        setResult(data);
+      }
+    } catch (err) {
+      setError("Failed to connect to the server. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const urgencyColor = {
+    routine: "bg-green-50 border-green-200 text-green-900",
+    soon: "bg-yellow-50 border-yellow-200 text-yellow-900",
+    urgent: "bg-orange-50 border-orange-200 text-orange-900",
+    emergency: "bg-red-50 border-red-200 text-red-900",
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Report Analyzer</h1>
         <p className="text-muted-foreground mt-2">
-          Upload and analyze your medical reports
+          Upload your medical reports for AI-powered analysis
         </p>
       </div>
 
@@ -70,114 +80,129 @@ export default function ReportAnalyzer() {
             <div className="text-center">
               <p className="font-semibold">Drop your report here</p>
               <p className="text-sm text-muted-foreground">
-                or click to select PDF files
+                Supports PDF, JPG, JPEG, PNG (max 10MB)
               </p>
             </div>
-            <Button>Select Files</Button>
+            <label className="cursor-pointer">
+              <Button as="span" disabled={loading}>
+                {loading ? "Analyzing..." : "Select File"}
+              </Button>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={loading}
+              />
+            </label>
+            {fileName && (
+              <p className="text-sm text-muted-foreground">
+                Selected: {fileName}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Reports List and Details */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Reports List */}
-        <div className="lg:col-span-1">
+      {/* Error */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <p className="text-red-800 text-sm">❌ {error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              🔍 AI is analyzing your report... This may take a moment.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Results */}
+      {result && (
+        <div className="space-y-6">
+          {/* Urgency Level */}
+          <Card className={`border ${urgencyColor[result.urgency_level] || urgencyColor.routine}`}>
+            <CardContent className="pt-6">
+              <p className="font-semibold text-lg">
+                Urgency Level:{" "}
+                <span className="capitalize">{result.urgency_level || "Routine"}</span>
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Summary */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Your Reports</CardTitle>
+              <CardTitle>📋 Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {reports.map((report) => (
-                  <button
-                    key={report.id}
-                    onClick={() => setSelectedReport(report)}
-                    className={`w-full text-left p-3 rounded-lg border transition-all ${
-                      selectedReport.id === report.id
-                        ? "border-primary bg-primary/10"
-                        : "border-transparent hover:bg-muted"
-                    }`}
-                  >
-                    <p className="font-medium text-sm">{report.name}</p>
-                    <p className="text-xs text-muted-foreground">{report.date}</p>
-                  </button>
-                ))}
-              </div>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {result.summary || "No summary available."}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Abnormal Values */}
+          {result.abnormal_values && (
+            <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950">
+              <CardHeader>
+                <CardTitle className="text-yellow-900 dark:text-yellow-100">
+                  ⚠️ Abnormal Values
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-yellow-800 dark:text-yellow-200 whitespace-pre-wrap">
+                  {result.abnormal_values}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Term Explanations */}
+          {result.term_explanations && (
+            <Card>
+              <CardHeader>
+                <CardTitle>📖 Medical Terms Explained</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {result.term_explanations}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Questions for Doctor */}
+          {result.questions_for_doctor && (
+            <Card>
+              <CardHeader>
+                <CardTitle>💬 Questions to Ask Your Doctor</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {result.questions_for_doctor}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Disclaimer */}
+          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+            <CardContent className="pt-6">
+              <p className="text-xs text-blue-800 dark:text-blue-200">
+                ℹ️ {result.disclaimer}
+              </p>
             </CardContent>
           </Card>
         </div>
-
-        {/* Report Details */}
-        <div className="lg:col-span-2 space-y-6">
-          {selectedReport && (
-            <>
-              {/* Parameters */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Lab Parameters</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {selectedReport.parameters.map((param, idx) => {
-                      const config = statusConfig[param.status];
-                      const Icon = config.icon;
-                      return (
-                        <div key={idx} className={`p-4 rounded-lg ${config.bg}`}>
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <Icon className={`w-5 h-5 ${config.color}`} />
-                              <div>
-                                <p className="font-semibold">{param.name}</p>
-                                <p className={`text-sm font-medium ${config.color}`}>
-                                  {param.status === "normal" && "Normal"}
-                                  {param.status === "low" && "Low"}
-                                  {param.status === "high" && "High"}
-                                  {param.status === "critical" && "Critical"}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold">{param.value}</p>
-                              <p className="text-xs text-muted-foreground">{param.unit}</p>
-                            </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-2">
-                            {param.explanation}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Trend Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">History Trend</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="hemoglobin"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
